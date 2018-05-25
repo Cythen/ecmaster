@@ -1,0 +1,6 @@
+#!/bin/bash
+
+MAC=TODO
+
+sudo insmod ec_master.ko main_devices=$MAC
+sudo insmod ec_generic.ko
