@@ -42,7 +42,7 @@ case "${1}" in
             RES="$(cat /proc/modules | grep -w ec_generic)"
             if [ "$RES" == "" ]; then
 
-                echo -e "Loading module $BOLD$DRV_ETH$NC"
+                echo -e "Loading module $BOLD ec_generic $NC"
                 sudo modprobe ec_generic
                 if [ $? != 0 ]; then
                     echo -e "${RED}Loading kernel module $BOLD ec_generic $NC$RED failed.$NC"
@@ -78,7 +78,17 @@ case "${1}" in
 
         echo -e "Done.\n"
         ;;
-esac
+
+    *)
+        echo "-------------------------------------------------------------------------------"
+        echo "Usage: `basename $0` start [-e ethernet_port]  "
+        echo "Usage: `basename $0` stop                 "
+        echo "            ethernet_port_nr (-e): eth0, eth1, eth2,..."
+        echo "-------------------------------------------------------------------------------"
+        exit 1
+        ;;
+
+    esac
 
 
 
