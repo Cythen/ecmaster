@@ -1,6 +1,84 @@
 #!/bin/bash
 
-MAC=TODO
+ETHERCAT_PORT=eth0
 
-sudo insmod ec_master.ko main_devices=$MAC
-sudo insmod ec_generic.ko
+OPTIND=2
+while getopts e: opt; do
+    case $opt in
+        e)
+            ETHERCAT_PORT=$OPTARG
+            echo "Ethernet port $ETHERCAT_PORT"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            echo "-------------------------------------------------------------------------------"
+            echo "Usage: `basename $0` start [-e ethernet_port]  "
+            echo "Usage: `basename $0` stop                 "
+            echo "            ethernet_port_nr (-e): eth0, eth1, eth2,..."
+            echo "-------------------------------------------------------------------------------"
+            exit 1
+            ;;
+    esac
+done
+
+
+eval MAC=$(ip addr show $ETHERCAT_PORT | awk 'BEGIN{} /ether/ {print $2}')
+
+
+case "${1}" in
+    start)
+        echo -e "Starting EtherCAT master on interface $BOLD$ETHERCAT_PORT$NC MAC $BOLD$MAC$NC"
+
+        RES="$(cat /proc/modules | grep -w ec_master)"
+        if [ "$RES" == "" ]; then
+
+            echo -e "Loading module $BOLD ec_master $NC"
+            sudo modprobe ec_master main_devices=$MAC backup_devices=""
+            if [ $? != 0 ]; then
+                echo -e "${RED}Loading kernel module $BOLD ec_master $NC$RED failed.$NC"
+                exit 1
+            fi
+
+            RES="$(cat /proc/modules | grep -w ec_generic)"
+            if [ "$RES" == "" ]; then
+
+                echo -e "Loading module $BOLD$DRV_ETH$NC"
+                sudo modprobe ec_generic
+                if [ $? != 0 ]; then
+                    echo -e "${RED}Loading kernel module $BOLD ec_generic $NC$RED failed.$NC"
+                    exit 1
+                fi
+            fi
+
+            echo -e "Done.\n"
+        else
+            echo -e "EtherCAT kernel modules already loaded."
+        fi
+
+        ;;
+
+    stop)
+        echo -e "Shutting down EtherCAT master:\n"
+
+        RES="$(cat /proc/modules | grep -w ec_generic)"
+        if [ "$RES" != "" ]; then
+            echo -e "Step 1 from 2: Unloading kernel module ${BOLD}ec_generico$NC"
+            sudo rmmod ec_generic
+        else
+            echo -e "Step 1 from 2: Kernel module ${BOLD}ec_generic$NC already unloaded."
+        fi
+
+        RES="$(cat /proc/modules | grep -w ec_master)"
+        if [ "$RES" != "" ]; then
+            echo -e "Step 2 from 2: Unloading kernel module ${BOLD}ec_master$NC"
+            sudo rmmod ec_master
+        else
+            echo -e "Step 2 from 2: Kernel module ${BOLD}ec_master$NC already unloaded."
+        fi
+
+        echo -e "Done.\n"
+        ;;
+esac
+
+
+
